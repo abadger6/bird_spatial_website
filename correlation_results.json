@@ -1,0 +1,18 @@
+{
+    "American Kestrel.gpkg": {
+        "Coal Power Plants.geojson": -0.1884017388951283,
+        "Hydrocarbon Gas Liquid Pipelines.geojson": -0.12638539591761047,
+        "Hydroelectric Power Plants.geojson": -0.10689177494459279,
+        "Natural Gas Power Plants.geojson": -0.21403379276230577,
+        "Oil and Natural Gas Platforms.geojson": -0.25646090260180565,
+        "Solar PV Power Plants.geojson": -0.2278370373147947
+    },
+    "Black Capped Chickadee.gpkg": {
+        "Coal Power Plants.geojson": -0.15433165427455983,
+        "Hydrocarbon Gas Liquid Pipelines.geojson": -0.2404048033081525,
+        "Hydroelectric Power Plants.geojson": -0.13906637126623397,
+        "Natural Gas Power Plants.geojson": -0.19714540348457732,
+        "Oil and Natural Gas Platforms.geojson": -0.09407349271973349,
+        "Solar PV Power Plants.geojson": -0.22873343027292806
+    }
+}

@@ -8,6 +8,13 @@ import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+import json
+
+# Load precomputed correlation results
+with open("correlation_results.json", "r") as f:
+    precomputed_correlations = json.load(f)
+
+
 # Define directories containing your geospatial files
 BIRD_DIR = "birds"
 INFRA_DIR = "infrastructure"
@@ -81,14 +88,26 @@ def extract_lat_lon(gdf):
 # Initialize the Dash app with a Bootstrap theme
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.title = "Bird & Energy Infrastructure Mapping"
+server = app.server
 
-# Layout of the app, now with an extra Graph for the scatter plots.
+# Layout of the app with an extra header for bullet notes and a taller scatter plot.
 app.layout = dbc.Container([
     dbc.Row([
         dbc.Col(html.H1("Bird & Energy Infrastructure Mapping Suite"), width=8),
         dbc.Col(html.H4("by Your Name"), width=4, className="text-end align-self-center")
     ], className="my-3"),
-    
+    # New row for bullet notes summarizing your thoughts on the app.
+    dbc.Row([
+        dbc.Col(
+            html.Ul([
+                html.Li("This app maps bird abundance and energy infrastructure."),
+                html.Li("It performs spatial correlation analysis between bird 'abd' and distance to energy features."),
+                html.Li("Separate scatter plots (in km) are generated for each energy layer.")
+            ]),
+            width=12
+        )
+    ], className="my-3"),
+    # Dropdown row (image removed).
     dbc.Row([
         dbc.Col([
             html.Label("Select a Bird Species:"),
@@ -98,16 +117,12 @@ app.layout = dbc.Container([
             html.Label("Select Energy Infrastructure (multiple allowed):"),
             dcc.Dropdown(id="infra-dropdown", options=infra_options,
                          multi=True, placeholder="Select infrastructure...")
-        ], width=8),
-        dbc.Col(html.Img(src="/assets/logo.png", style={"maxWidth": "100%", "height": "auto"}),
-                width=4, className="text-end")
+        ], width=12)
     ], className="my-3"),
-    
     dbc.Row([
         dbc.Col(html.Button("Generate Map", id="map-button", n_clicks=0, className="btn btn-primary"),
                 width={"size": 4, "offset": 4}, className="text-center")
     ], className="my-3"),
-    
     # Row to display the map and status/analysis text.
     dbc.Row([
         dbc.Col([
@@ -119,13 +134,13 @@ app.layout = dbc.Container([
             html.Div(id="status-message", className="mt-3", style={"fontSize": "18px"})
         ])
     ]),
-    # New row to display the individual scatter plots.
+    # New row to display the individual scatter plots; set height to 80vh.
     dbc.Row([
         dbc.Col(
             dcc.Loading(
                 id="loading-scatter",
                 type="default",
-                children=dcc.Graph(id="scatter-plot", config={"displayModeBar": True})
+                children=dcc.Graph(id="scatter-plot", config={"displayModeBar": True}, style={"height": "80vh"})
             )
         )
     ])
@@ -249,18 +264,18 @@ def update_map(n_clicks, selected_bird, selected_infra):
                     )
                     fig.add_trace(dummy_trace)
                 
-                # Perform correlation analysis for this energy layer (if "abd" exists).
+                # Perform correlation analysis for this energy layer if "abd" exists.
                 if "abd" in bird_gdf.columns:
                     r = compute_correlation_per_layer(bird_gdf, infra_gdf)
                     if r is not None:
                         correlation_results[os.path.splitext(infra_file)[0]] = r
                         
-                    # Compute scatter data: x = bird abd, y = distances (in meters).
+                    # Compute scatter data: x = bird "abd", y = distances in km (convert m to km).
                     distances = compute_distances(bird_gdf, infra_gdf)
                     scatter_data.append({
                         "name": os.path.splitext(infra_file)[0],
                         "x": bird_gdf["abd"].values,
-                        "y": distances,
+                        "y": distances,  # will convert to km in plotting
                         "color": chosen_color
                     })
             except Exception as e:
@@ -274,11 +289,11 @@ def update_map(n_clicks, selected_bird, selected_infra):
         legend=dict(orientation="h", yanchor="bottom", y=1, xanchor="center", x=0.5)
     )
     
-    # Create individual scatter plots for each energy layer using subplots.
+    # Create individual scatter subplots for each energy layer.
     if scatter_data:
-        # Determine the global y-axis range across all energy layers.
-        global_y_min = min(np.min(d["y"]) for d in scatter_data)
-        global_y_max = max(np.max(d["y"]) for d in scatter_data)
+        # Compute global y-axis range in km (convert distances from m to km).
+        global_y_min = min(np.min(d["y"]) for d in scatter_data) / 1000
+        global_y_max = max(np.max(d["y"]) for d in scatter_data) / 1000
         n_plots = len(scatter_data)
         subplot_titles = [f"Scatter Plot: {d['name']}" for d in scatter_data]
         scatter_fig = make_subplots(rows=n_plots, cols=1, shared_yaxes=True, subplot_titles=subplot_titles)
@@ -287,20 +302,20 @@ def update_map(n_clicks, selected_bird, selected_infra):
             scatter_fig.add_trace(
                 go.Scatter(
                     x=d["x"],
-                    y=d["y"],
+                    y=d["y"] / 1000,  # convert m to km
                     mode="markers",
                     marker=dict(color=d["color"], size=8),
                     name=d["name"]
                 ),
                 row=idx, col=1
             )
-            # Set the y-axis range for this subplot.
             scatter_fig.update_yaxes(range=[global_y_min, global_y_max], row=idx, col=1)
         
         scatter_fig.update_layout(
-            title="Individual Scatter Plots: Bird Abundance (abd) vs. Distance to Energy Infrastructure",
+            title="Individual Scatter Plots: Bird Abundance (abd) vs. Distance (km)",
             xaxis_title="Bird Abundance (abd)",
-            yaxis_title="Distance (meters)",
+            yaxis_title="Distance (km)",
+            legend=dict(orientation="h", yanchor="bottom", y=1, xanchor="center", x=0.5),
             margin={"r": 20, "t": 80, "l": 40, "b": 40}
         )
     else:
@@ -320,5 +335,8 @@ def update_map(n_clicks, selected_bird, selected_infra):
 
     return fig, status_message, scatter_fig
 
+
+
 if __name__ == '__main__':
     app.run_server(debug=True)
+

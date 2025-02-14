@@ -74,6 +74,7 @@ def extract_lat_lon(gdf):
 # Initialize the Dash app with a Bootstrap theme
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.title = "Bird & Energy Infrastructure Mapping"
+server = app.server
 
 # Layout of the app with an extra header for bullet notes and a taller scatter plot.
 app.layout = dbc.Container([

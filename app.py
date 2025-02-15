@@ -127,7 +127,7 @@ app.layout = dbc.Container([
     ]),
     # Section: Parallel Coordinates Plot.
     dbc.Row([
-        dbc.Col(html.H5("Parallel Coordinates Plot: Abundance and Distances"), width=12)
+        dbc.Col(html.H5("Parallel Coordinates Plot: Comparing Abundance and Distances. Use the sliders for each vertical line to select a subset of variables to isolate. This may not work as well for mobile users. "), width=12)
     ], className="my-2"),
     dbc.Row([
         dbc.Col(
